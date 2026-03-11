@@ -38,7 +38,7 @@ export default async function InvoicePage({ params }: Props) {
       customer: { select: { name: true, email: true, phone: true } },
       template: { select: { name: true } },
       payments: {
-        where: { status: 'settlement' },
+        where: { status: 'success' },
         orderBy: { paidAt: 'desc' },
         take: 1,
       },
