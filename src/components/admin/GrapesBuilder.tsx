@@ -40,7 +40,7 @@ export function GrapesBuilder({ template }: GrapesBuilderProps) {
         height: '100%',
         plugins: [presetWebpage],
         pluginsOpts: {
-          [presetWebpage]: { blocks: ['link-block', 'quote', 'text-basic'] },
+          [presetWebpage as unknown as string]: { blocks: ['link-block', 'quote', 'text-basic'] },
         },
         storageManager: false,
         assetManager: {

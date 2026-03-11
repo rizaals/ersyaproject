@@ -59,14 +59,12 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         >
           <FileText className="h-4 w-4" /> Invoice
         </Link>
-        {order.template && (
-          <Link
-            href={`/admin/builder/${order.template.id}`}
-            className="flex items-center gap-1.5 bg-brand text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-brand-dark transition-colors"
-          >
-            <Wand2 className="h-4 w-4" /> Buka Builder
-          </Link>
-        )}
+        <Link
+          href={`/admin/orders/${params.id}/project`}
+          className="flex items-center gap-1.5 bg-brand text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-brand-dark transition-colors"
+        >
+          <Wand2 className="h-4 w-4" /> Buka Builder
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

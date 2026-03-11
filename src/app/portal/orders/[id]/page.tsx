@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ChatBox } from '@/components/portal/ChatBox'
 import { AssetList } from '@/components/portal/AssetList'
 import { RevisionButton } from '@/components/portal/RevisionButton'
-import { ArrowLeft, CheckCircle2, Circle, Clock, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Circle, Clock, XCircle, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { OrderStatus } from '@prisma/client'
 
@@ -43,6 +43,7 @@ export default async function PortalOrderDetailPage({ params }: Props) {
     include: {
       template: { select: { name: true, slug: true, thumbnailUrl: true, serviceType: true } },
       assignee: { select: { name: true } },
+      project: { select: { id: true, pages: true, inlinedHtml: true, serviceType: true } },
       assets: { orderBy: { uploadedAt: 'desc' } },
       messages: {
         orderBy: { createdAt: 'asc' },
@@ -238,6 +239,40 @@ export default async function PortalOrderDetailPage({ params }: Props) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Project result — shown when status is review or done */}
+          {order.project && ['review', 'done'].includes(order.status) && (
+            <div className="rounded-xl border bg-card p-4">
+              <h2 className="font-semibold text-sm mb-3">Hasil Project</h2>
+              {order.serviceType === 'email' && order.project.inlinedHtml ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">File email HTML siap pakai dengan CSS inline.</p>
+                  <a
+                    href={`/api/projects/${order.project.id}/export`}
+                    className="flex items-center gap-1.5 border px-3 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+                    download={`email-${order.orderNumber}.html`}
+                  >
+                    <Download className="h-4 w-4" /> Download Email HTML
+                  </a>
+                </div>
+              ) : order.serviceType === 'landing_page' ? (
+                <div className="space-y-2">
+                  {(order.project.pages as Array<{ name: string }>).map((page, idx) => (
+                    <a
+                      key={idx}
+                      href={`/api/projects/${order.project!.id}/export?page=${idx}`}
+                      className="flex items-center gap-1.5 border px-3 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+                      download={`lp-${order.orderNumber}-${page.name}.html`}
+                    >
+                      <Download className="h-4 w-4" /> {page.name}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Hasil sedang diproses.</p>
+              )}
             </div>
           )}
 
