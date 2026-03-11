@@ -7,10 +7,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// BigInt-safe JSON serializer
+function safeJson(value: unknown): string {
+  return JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? v.toString() : v))
+}
+
 // API response helpers
 // apiSuccess(data) | apiSuccess(data, 'message', 201)
 export function apiSuccess<T>(data: T, message?: string, status = 200) {
-  return NextResponse.json({ success: true, data, ...(message ? { message } : {}) }, { status })
+  const body = safeJson({ success: true, data, ...(message ? { message } : {}) })
+  return new NextResponse(body, { status, headers: { 'Content-Type': 'application/json' } })
 }
 
 // apiError('message') | apiError('message', 400)
