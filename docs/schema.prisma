@@ -1,0 +1,352 @@
+// LandingForge — Prisma Schema
+// Versi: 1.0.0 | Maret 2026
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  customer
+  admin
+  superadmin
+}
+
+enum ServiceType {
+  landing_page
+  email
+}
+
+enum TemplateStatus {
+  active
+  draft
+  archived
+}
+
+enum EmailCategory {
+  promotional
+  newsletter
+  welcome
+  transactional
+  event
+}
+
+enum OrderStatus {
+  awaiting_payment
+  pending
+  confirmed
+  in_progress
+  review
+  done
+  cancelled
+}
+
+enum PaymentStatus {
+  unpaid
+  paid
+  refunded
+  failed
+}
+
+enum Package {
+  basic
+  custom
+  premium
+}
+
+enum ProjectServiceType {
+  landing_page
+  email
+}
+
+enum PaymentTxStatus {
+  pending
+  success
+  failed
+  expired
+  refunded
+}
+
+enum ThemeSource {
+  manual
+  imported
+}
+
+enum ThemeApplicableTo {
+  landing_page
+  email
+  both
+}
+
+enum MessageType {
+  text
+  file
+}
+
+enum NotificationType {
+  order_new
+  order_status_updated
+  payment_success
+  payment_failed
+  message_new
+  review_ready
+  revision_requested
+  template_activated
+  test_email_sent
+}
+
+// ─────────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid())
+  name          String    @db.VarChar(100)
+  email         String    @unique @db.VarChar(150)
+  passwordHash  String    @map("password_hash")
+  phone         String?   @db.VarChar(20)
+  role          Role      @default(customer)
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  ordersAsCustomer  Order[]         @relation("CustomerOrders")
+  ordersAsAssignee  Order[]         @relation("AssigneeOrders")
+  templatesCreated  Template[]
+  messages          Message[]
+  notifications     Notification[]
+  assets            OrderAsset[]
+  themesCreated     Theme[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// CATEGORIES
+// ─────────────────────────────────────────────
+
+model Category {
+  id          String      @id @default(uuid())
+  serviceType ServiceType @map("service_type")
+  name        String      @unique @db.VarChar(100)
+  slug        String      @unique @db.VarChar(100)
+  icon        String?     @db.VarChar(50)
+
+  // Relations
+  templates   Template[]
+
+  @@map("categories")
+}
+
+// ─────────────────────────────────────────────
+// TEMPLATES
+// ─────────────────────────────────────────────
+
+model Template {
+  id            String          @id @default(uuid())
+  serviceType   ServiceType     @map("service_type")
+  name          String          @db.VarChar(150)
+  slug          String          @unique @db.VarChar(150)
+  categoryId    String          @map("category_id")
+  pageCount     Int             @default(1) @map("page_count")
+  emailCategory EmailCategory?  @map("email_category")
+  thumbnailUrl  String?         @map("thumbnail_url")
+  previewUrl    String?         @map("preview_url")
+  gjsData       Json?           @map("gjs_data")
+  status        TemplateStatus  @default(draft)
+  createdById   String          @map("created_by")
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  category      Category        @relation(fields: [categoryId], references: [id])
+  createdBy     User            @relation(fields: [createdById], references: [id])
+  orders        Order[]
+
+  @@map("templates")
+}
+
+// ─────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────
+
+model Order {
+  id             String        @id @default(uuid())
+  orderNumber    String        @unique @db.VarChar(20) @map("order_number")
+  serviceType    ServiceType   @map("service_type")
+  customerId     String        @map("customer_id")
+  templateId     String?       @map("template_id")
+  assigneeId     String?       @map("assignee_id")
+  package        Package
+  status         OrderStatus   @default(awaiting_payment)
+  price          BigInt
+  paymentStatus  PaymentStatus @default(unpaid) @map("payment_status")
+  brief          Json
+  notes          String?
+  revisionCount  Int           @default(0) @map("revision_count")
+  maxRevisions   Int           @default(2) @map("max_revisions")
+  deadline       DateTime?     @db.Date
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  customer       User          @relation("CustomerOrders", fields: [customerId], references: [id])
+  assignee       User?         @relation("AssigneeOrders", fields: [assigneeId], references: [id])
+  template       Template?     @relation(fields: [templateId], references: [id])
+  project        Project?
+  payments       Payment[]
+  assets         OrderAsset[]
+  messages       Message[]
+  notifications  Notification[]
+
+  @@index([serviceType])
+  @@index([status])
+  @@index([customerId])
+  @@index([assigneeId])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+// ─────────────────────────────────────────────
+// PROJECTS (Builder)
+// ─────────────────────────────────────────────
+
+model Project {
+  id           String             @id @default(uuid())
+  orderId      String             @unique @map("order_id")
+  serviceType  ProjectServiceType @map("service_type")
+  name         String             @db.VarChar(150)
+  // pages: array of { name: string, gjsData: object }
+  // LP: bisa banyak item (maks 5), Email: selalu 1 item
+  pages        Json
+  inlinedHtml  String?            @map("inlined_html") // Email only: hasil juice
+  subdomain    String?            @unique @db.VarChar(100) // LP only
+  publishedAt  DateTime?          @map("published_at")   // LP only
+  exportUrl    String?            @map("export_url")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  order        Order              @relation(fields: [orderId], references: [id])
+
+  @@map("projects")
+}
+
+// ─────────────────────────────────────────────
+// PAYMENTS (Midtrans)
+// ─────────────────────────────────────────────
+
+model Payment {
+  id               String          @id @default(uuid())
+  orderId          String          @map("order_id")
+  midtransOrderId  String          @unique @map("midtrans_order_id") @db.VarChar(100)
+  midtransToken    String?         @map("midtrans_token") // Snap token
+  paymentMethod    String?         @map("payment_method") @db.VarChar(50)
+  amount           BigInt
+  status           PaymentTxStatus @default(pending)
+  paidAt           DateTime?       @map("paid_at")
+  createdAt        DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  order            Order           @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────
+// ORDER ASSETS
+// ─────────────────────────────────────────────
+
+model OrderAsset {
+  id          String   @id @default(uuid())
+  orderId     String   @map("order_id")
+  uploaderId  String   @map("uploader_id")
+  fileUrl     String   @map("file_url")
+  fileName    String   @map("file_name") @db.VarChar(255)
+  fileType    String   @map("file_type") @db.VarChar(50)
+  uploadedAt  DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  order       Order    @relation(fields: [orderId], references: [id])
+  uploader    User     @relation(fields: [uploaderId], references: [id])
+
+  @@index([orderId])
+  @@map("order_assets")
+}
+
+// ─────────────────────────────────────────────
+// MESSAGES (Chat)
+// ─────────────────────────────────────────────
+
+model Message {
+  id        String      @id @default(uuid())
+  orderId   String      @map("order_id")
+  senderId  String      @map("sender_id")
+  content   String
+  type      MessageType @default(text)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  order     Order       @relation(fields: [orderId], references: [id])
+  sender    User        @relation(fields: [senderId], references: [id])
+
+  @@index([orderId])
+  @@map("messages")
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  orderId   String?          @map("order_id")
+  type      NotificationType
+  message   String
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user      User             @relation(fields: [userId], references: [id])
+  order     Order?           @relation(fields: [orderId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────
+// THEMES (Template Generator output)
+// ─────────────────────────────────────────────
+
+model Theme {
+  id           String            @id @default(uuid())
+  name         String            @db.VarChar(100)
+  source       ThemeSource       @default(manual)
+  applicableTo ThemeApplicableTo @default(both) @map("applicable_to")
+  // tokens structure:
+  // {
+  //   colors: { primary, secondary, background, text, accent },
+  //   typography: { heading_font, body_font, base_size, heading_weight },
+  //   spacing: { section_padding, container_max_width },
+  //   radius: string,
+  //   shadow: string
+  // }
+  tokens       Json
+  createdById  String            @map("created_by")
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  createdBy    User              @relation(fields: [createdById], references: [id])
+
+  @@map("themes")
+}

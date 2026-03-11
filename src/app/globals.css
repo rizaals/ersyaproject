@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  ersya projects — Design Tokens
+  Brand teal: #26bfbf  →  HSL: 180 66% 45%
+*/
+
+@layer base {
+  :root {
+    /* Brand teal sebagai primary */
+    --primary:             180 66% 45%;   /* #26bfbf */
+    --primary-foreground:  0 0% 100%;     /* white */
+
+    /* Backgrounds */
+    --background:          0 0% 100%;
+    --foreground:          220 20% 10%;   /* near-black slate */
+
+    --card:                0 0% 100%;
+    --card-foreground:     220 20% 10%;
+
+    --secondary:           180 40% 96%;   /* very light teal tint */
+    --secondary-foreground: 180 50% 25%;
+
+    --muted:               210 20% 96%;
+    --muted-foreground:    215 16% 47%;
+
+    --accent:              180 50% 93%;   /* light teal accent */
+    --accent-foreground:   180 60% 25%;
+
+    --destructive:         0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:              214 20% 90%;
+    --input:               214 20% 90%;
+    --ring:                180 66% 45%;   /* matches primary */
+
+    --radius:              0.5rem;
+  }
+
+  .dark {
+    --primary:             180 55% 48%;
+    --primary-foreground:  0 0% 100%;
+
+    --background:          220 20% 9%;
+    --foreground:          210 40% 96%;
+
+    --card:                220 20% 12%;
+    --card-foreground:     210 40% 96%;
+
+    --secondary:           180 20% 18%;
+    --secondary-foreground: 180 40% 80%;
+
+    --muted:               217 20% 17%;
+    --muted-foreground:    215 20% 60%;
+
+    --accent:              180 30% 20%;
+    --accent-foreground:   180 50% 80%;
+
+    --destructive:         0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:              217 20% 18%;
+    --input:               217 20% 18%;
+    --ring:                180 55% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Text gradient */
+  .text-brand-gradient {
+    background: linear-gradient(135deg, #26bfbf, #1a9f9f);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  /* Subtle teal tint untuk section background */
+  .bg-teal-subtle {
+    background-color: #f0fdfc;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 14mm;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  body { background: white; }
+  .print\:hidden { display: none !important; }
+  nav, header, aside { display: none !important; }
+}
